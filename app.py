@@ -1,7 +1,10 @@
 import streamlit as st
+from openai import OpenAI
+
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+import streamlit as st
 import os
 import json
-from openai import OpenAI
 from pypdf import PdfReader
 import docx
 
@@ -45,28 +48,29 @@ def read_docx(file):
 # =========================
 # OPENAI HELPERS
 # =========================
-def generate_roadmap(resume, role):
+def generate_roadmap(resume_text, target_role):
     prompt = f"""
-You are an AI Career Mentor.
+    You are an AI career mentor.
 
-Analyze the following resume and generate a personalized 6-month learning roadmap
-for the target role: {role}.
+    Candidate Resume:
+    {resume_text}
 
-Include:
-- Skill gaps
-- Learning phases
-- Recommended tools/technologies
-- Interview preparation tips
+    Target Role: {target_role}
 
-Resume:
-{resume}
-"""
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.4
+    Create a personalized 6-month learning roadmap with:
+    - Skills to learn
+    - Tools & technologies
+    - Projects to build
+    - Interview preparation focus
+    """
+
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=prompt
     )
-    return response.choices[0].message.content
+
+    return response.output_text
+
 
 def evaluate_answer(question, answer, role):
     prompt = f"""
@@ -88,12 +92,6 @@ Provide:
 - Strengths
 - Weaknesses
 - Improvement suggestions
-"""
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3
-    )
     return response.choices[0].message.content
 
 # =========================
