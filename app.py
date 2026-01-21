@@ -1,20 +1,31 @@
 import streamlit as st
-from openai import OpenAI
-
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-import streamlit as st
 import os
 import json
 from pypdf import PdfReader
 import docx
+from openai import OpenAI
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv(override=True)
 
 # =========================
 # CONFIG
 # =========================
 st.set_page_config(page_title="AI Career Mentor", layout="wide")
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # set in environment
-client = OpenAI(api_key="OPENAI_API_KEY")
+# Use environment variable directly
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+if not OPENAI_API_KEY:
+    # Fallback to secrets for Streamlit Cloud deployment
+    if "OPENAI_API_KEY" in st.secrets:
+        OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+    else:
+        st.error("OPENAI_API_KEY not found. Please set it in your .env file or Streamlit secrets.")
+        st.stop()
+
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 MEMORY_FILE = "user_memory.json"
 
@@ -64,34 +75,47 @@ def generate_roadmap(resume_text, target_role):
     - Interview preparation focus
     """
 
-    response = client.responses.create(
-        model="gpt-4.1-mini",
-        input=prompt
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful career mentor."},
+            {"role": "user", "content": prompt}
+        ]
     )
 
-    return response.output_text
+    return response.choices[0].message.content
 
 
 def evaluate_answer(question, answer, role):
     prompt = f"""
-You are an interview evaluator for the role of {role}.
+    You are an interview evaluator for the role of {role}.
 
-Evaluate the candidate's answer based on:
-- Clarity
-- Technical depth
-- Structure
-- Communication
+    Evaluate the candidate's answer based on:
+    - Clarity
+    - Technical depth
+    - Structure
+    - Communication
 
-Question:
-{question}
+    Question:
+    {question}
 
-Answer:
-{answer}
+    Answer:
+    {answer}
 
-Provide:
-- Strengths
-- Weaknesses
-- Improvement suggestions
+    Provide:
+    - Strengths
+    - Weaknesses
+    - Improvement suggestions
+    """
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are an expert interview evaluator."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
     return response.choices[0].message.content
 
 # =========================
